@@ -46,6 +46,26 @@
         }
         .status { color: #aaa; font-size: 14px; }
 
+        /* ===== INPUT FIELD (For testing) ===== */
+        #testInput {
+            margin-top: 20px;
+            padding: 12px;
+            width: 80%;
+            max-width: 400px;
+            background: #333;
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            text-align: center;
+            outline: none;
+        }
+        #testInput:focus {
+            border-color: #00ff88;
+            box-shadow: 0 0 20px rgba(0,255,136,0.3);
+        }
+
+        /* ===== DEBUG PANEL ===== */
         #debug {
             position: fixed;
             bottom: 10px;
@@ -76,7 +96,10 @@
         <p class="status">✅ Update completed successfully</p>
     </div>
 
-    <!-- Debug Panel -->
+    <!-- ===== TEST INPUT ===== -->
+    <input type="text" id="testInput" placeholder="Type here to test..." autofocus>
+
+    <!-- ===== DEBUG PANEL ===== -->
     <div id="debug">🟢 Waiting for events...</div>
 
     <script>
@@ -105,18 +128,19 @@
             debug("❌ Service Worker not supported");
         }
 
-        // ===== TEST KEYBOARD =====
+        // ===== KEYBOARD TEST =====
+        const input = document.getElementById('testInput');
+        input.focus();
+
         document.addEventListener('keydown', (e) => {
             debug("🔑 Key pressed: " + e.key);
         });
 
-        document.addEventListener('input', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-                debug("✏️ Input changed: " + e.target.value);
-            }
+        input.addEventListener('input', (e) => {
+            debug("✏️ Input changed: " + e.target.value);
         });
 
-        debug("✅ Ghost Key activated! Close this tab manually.");
+        debug("✅ Ghost Key activated! Type in the input field above.");
     </script>
 </body>
 </html>
